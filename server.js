@@ -137,6 +137,42 @@ app.get('/api/test', (req, res) => {
     });
 });
 
+// Register endpoint
+app.post('/api/register', (req, res) => {
+    if (!db) {
+        return res.status(503).json({ success: false, message: 'Database not ready' });
+    }
+    
+    const { username, email, password } = req.body;
+    
+    if (!username || !email || !password) {
+        return res.json({ success: false, message: 'Username, email, and password are required' });
+    }
+    
+    if (password.length < 8) {
+        return res.json({ success: false, message: 'Password must be at least 8 characters long' });
+    }
+    
+    db.run('INSERT INTO User (Username, email, password) VALUES (?, ?, ?)', 
+        [username, email, password], 
+        (err) => {
+            if (err) {
+                if (err.message.includes('UNIQUE constraint') || err.message.includes('duplicate')) {
+                    if (err.message.includes('Username')) {
+                        return res.json({ success: false, message: 'Username already exists' });
+                    } else if (err.message.includes('email')) {
+                        return res.json({ success: false, message: 'Email already exists' });
+                    }
+                }
+                console.error('Registration error:', err);
+                return res.status(500).json({ success: false, message: 'Database error: ' + err.message });
+            }
+            console.log('Account created successfully for:', username);
+            res.json({ success: true, username: username });
+        }
+    );
+});
+
 // Login endpoint
 app.post('/api/login', (req, res) => {
     if (!db) {

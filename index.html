@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Sign In</h1>
+        <h1 id="pageTitle">Sign In</h1>
         <form id="signinForm">
             <div class="form-group">
                 <label for="username">Username:</label>
@@ -19,6 +19,28 @@
                 <input type="password" id="password" name="password" required>
             </div>
             <button type="submit">Sign In</button>
+            <p style="text-align: center; margin-top: 15px;">
+                Don't have an account? <a href="#" id="showCreateAccount">Create Account</a>
+            </p>
+        </form>
+        
+        <form id="createAccountForm" style="display: none;">
+            <div class="form-group">
+                <label for="newUsername">Username:</label>
+                <input type="text" id="newUsername" name="newUsername" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+            </div>
+            <div class="form-group">
+                <label for="newPassword">Password (min 8 characters):</label>
+                <input type="password" id="newPassword" name="newPassword" required minlength="8">
+            </div>
+            <button type="submit">Create Account</button>
+            <p style="text-align: center; margin-top: 15px;">
+                Already have an account? <a href="#" id="showSignIn">Sign In</a>
+            </p>
         </form>
     </div>
     <script src="script.js"></script>
