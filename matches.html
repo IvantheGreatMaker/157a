@@ -19,31 +19,34 @@
                     <th>Date</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>1</td>
-                    <td>Team A</td>
-                    <td>Team B</td>
-                    <td>3-2</td>
-                    <td>2024-01-15</td>
-                </tr>
-                <tr>
-                    <td>2</td>
-                    <td>Team C</td>
-                    <td>Team D</td>
-                    <td>1-1</td>
-                    <td>2024-01-16</td>
-                </tr>
-                <tr>
-                    <td>3</td>
-                    <td>Team E</td>
-                    <td>Team F</td>
-                    <td>2-0</td>
-                    <td>2024-01-17</td>
-                </tr>
+            <tbody id="matchesBody">
+                <tr><td colspan="5">Loading...</td></tr>
             </tbody>
         </table>
     </div>
+    <script>
+        fetch('http://localhost:3000/api/matches')
+            .then(res => res.json())
+            .then(data => {
+                const tbody = document.getElementById('matchesBody');
+                tbody.innerHTML = '';
+                data.matches.forEach(match => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${match.matchID}</td>
+                        <td>${match.homeTeam}</td>
+                        <td>${match.awayTeam}</td>
+                        <td>${match.homeScore}-${match.awayScore}</td>
+                        <td>${match.matchDate}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            })
+            .catch(err => {
+                document.getElementById('matchesBody').innerHTML = 
+                    '<tr><td colspan="5">Error loading matches</td></tr>';
+            });
+    </script>
 </body>
 </html>
 

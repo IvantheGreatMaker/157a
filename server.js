@@ -15,17 +15,60 @@ const dbPath = './database.db';
 function initDatabase(callback) {
     const db = new sqlite3.Database(dbPath);
     
-    // Check if User table has data
-    db.get("SELECT COUNT(*) as count FROM User", (err, countRow) => {
-        if (err || !countRow || countRow.count === 0) {
-            // Database needs initialization - run the full schema file
-            console.log('Initializing database from schema...');
+    // Check if Match table exists (if it exists, all tables should exist)
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='Match'", (err, matchTable) => {
+        if (err || !matchTable) {
+            // Match table doesn't exist - run full schema to create all tables
+            console.log('Missing tables detected. Running full schema...');
             runSchemaFile(db, callback);
         } else {
-            // Database has data
-            console.log(`Database ready with ${countRow.count} users`);
-            callback(null, db);
+            // All tables exist, check if we have data
+            db.get("SELECT COUNT(*) as count FROM User", (err, countRow) => {
+                if (err || !countRow || countRow.count === 0) {
+                    // Tables exist but no users, insert data only
+                    console.log('Tables exist but empty. Inserting data...');
+                    insertDataOnly(db, callback);
+                } else {
+                    console.log(`Database ready with ${countRow.count} users`);
+                    callback(null, db);
+                }
+            });
         }
+    });
+}
+
+function insertDataOnly(db, callback) {
+    const sql = fs.readFileSync('./database.sql', 'utf8');
+    const statements = sql.split(';')
+        .map(s => s.trim())
+        .filter(s => s.length > 0 && s.toUpperCase().startsWith('INSERT'));
+    
+    db.serialize(() => {
+        let index = 0;
+        
+        function runNext() {
+            if (index >= statements.length) {
+                db.get("SELECT COUNT(*) as count FROM User", (err, row) => {
+                    if (err || !row || row.count === 0) {
+                        db.close();
+                        return callback(new Error('Failed to insert data'));
+                    }
+                    console.log(`Data inserted successfully with ${row.count} users`);
+                    callback(null, db);
+                });
+                return;
+            }
+            
+            const stmt = statements[index++];
+            db.run(stmt, (err) => {
+                if (err && !err.message.includes('UNIQUE constraint')) {
+                    console.error('Insert error:', err.message);
+                }
+                runNext();
+            });
+        }
+        
+        runNext();
     });
 }
 
@@ -130,6 +173,32 @@ app.post('/api/login', (req, res) => {
             console.log('Password mismatch for:', username);
             res.json({ success: false, message: 'Invalid username or password' });
         }
+    });
+});
+
+// Matches endpoint
+app.get('/api/matches', (req, res) => {
+    if (!db) {
+        return res.status(503).json({ error: 'Database not ready' });
+    }
+    
+    const query = `
+        SELECT m.matchID, m.matchDate, 
+               ht.name as homeTeam, at.name as awayTeam,
+               (SELECT COUNT(*) FROM Goal WHERE matchID = m.matchID AND teamID = m.home_teamID) as homeScore,
+               (SELECT COUNT(*) FROM Goal WHERE matchID = m.matchID AND teamID = m.away_teamID) as awayScore
+        FROM Match m
+        JOIN Team ht ON m.home_teamID = ht.teamID
+        JOIN Team at ON m.away_teamID = at.teamID
+        ORDER BY m.matchDate
+    `;
+    
+    db.all(query, (err, rows) => {
+        if (err) {
+            console.error('Matches query error:', err.message);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ matches: rows || [] });
     });
 });
 

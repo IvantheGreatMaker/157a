@@ -44,10 +44,10 @@ seasonID INTEGER NOT NULL,
 FOREIGN KEY (home_teamID) REFERENCES Team(teamID),
 FOREIGN KEY (away_teamID) REFERENCES Team(teamID),
 FOREIGN KEY (seasonID) REFERENCES Season(seasonID),
-CONSTRAINT different_teams CHECK (home_teamID != away_teamID),
-INDEX indexMatchSeason (seasonID),
-INDEX indexMatchDate (matchDate)
+CONSTRAINT different_teams CHECK (home_teamID != away_teamID)
 );
+CREATE INDEX indexMatchSeason ON Match(seasonID);
+CREATE INDEX indexMatchDate ON Match(matchDate);
 CREATE TABLE Goal (
 matchID INTEGER,
 minute INTEGER,
@@ -76,9 +76,9 @@ date DATE NOT NULL,
 matchID INTEGER NOT NULL,
 Username VARCHAR(25) NOT NULL,
 FOREIGN KEY (matchID) REFERENCES Match(matchID) ON DELETE CASCADE,
-FOREIGN KEY (Username) REFERENCES User(Username) ON DELETE CASCADE,
-INDEX idx_article_match (matchID)
+FOREIGN KEY (Username) REFERENCES User(Username) ON DELETE CASCADE
 );
+CREATE INDEX idx_article_match ON Article(matchID);
 
 CREATE TABLE Comment (
 commentID INTEGER PRIMARY KEY,
