@@ -1,7 +1,7 @@
 {
-  "name": "login-app",
+  "name": "Match View",
   "version": "1.0.0",
-  "description": "Simple login app",
+  "description": "Match View",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
