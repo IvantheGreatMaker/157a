@@ -11,21 +11,16 @@ app.use(express.static('.'));
 
 const dbPath = './database.db';
 
-// Initialize database
 function initDatabase(callback) {
     const db = new sqlite3.Database(dbPath);
     
-    // Check if Match table exists (if it exists, all tables should exist)
     db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='Match'", (err, matchTable) => {
         if (err || !matchTable) {
-            // Match table doesn't exist - run full schema to create all tables
             console.log('Missing tables detected. Running full schema...');
             runSchemaFile(db, callback);
         } else {
-            // All tables exist, check if we have data
             db.get("SELECT COUNT(*) as count FROM User", (err, countRow) => {
                 if (err || !countRow || countRow.count === 0) {
-                    // Tables exist but no users, insert data only
                     console.log('Tables exist but empty. Inserting data...');
                     insertDataOnly(db, callback);
                 } else {
@@ -74,7 +69,6 @@ function insertDataOnly(db, callback) {
 
 function runSchemaFile(db, callback) {
     const sql = fs.readFileSync('./database.sql', 'utf8');
-    // Split by semicolon and filter out empty statements
     const statements = sql.split(';')
         .map(s => s.trim())
         .filter(s => s.length > 0 && !s.match(/^\s*$/));
@@ -85,7 +79,6 @@ function runSchemaFile(db, callback) {
         
         function runNext() {
             if (index >= statements.length) {
-                // All statements executed, verify we have users
                 db.get("SELECT COUNT(*) as count FROM User", (err, row) => {
                     if (err) {
                         db.close();
@@ -104,8 +97,6 @@ function runSchemaFile(db, callback) {
             const stmt = statements[index++];
             db.run(stmt, (err) => {
                 if (err) {
-                    // Ignore "already exists" errors (tables/constraints already exist)
-                    // Ignore "UNIQUE constraint" errors (data already inserted)
                     if (!err.message.includes('already exists') && 
                         !err.message.includes('UNIQUE constraint') &&
                         !err.message.includes('duplicate column name')) {
@@ -113,7 +104,6 @@ function runSchemaFile(db, callback) {
                         hasError = true;
                     }
                 }
-                // Continue with next statement regardless
                 runNext();
             });
         }
@@ -124,7 +114,6 @@ function runSchemaFile(db, callback) {
 
 let db;
 
-// Test endpoint to check database
 app.get('/api/test', (req, res) => {
     if (!db) {
         return res.status(503).json({ error: 'Database not ready' });
@@ -137,7 +126,6 @@ app.get('/api/test', (req, res) => {
     });
 });
 
-// Login endpoint
 app.post('/api/login', (req, res) => {
     if (!db) {
         return res.status(503).json({ success: false, message: 'Database not ready' });
@@ -151,7 +139,6 @@ app.post('/api/login', (req, res) => {
         return res.json({ success: false, message: 'Username and password required' });
     }
     
-    // First check if user exists
     db.get('SELECT * FROM User WHERE Username = ?', [username], (err, userRow) => {
         if (err) {
             console.error('Database query error:', err);
@@ -165,7 +152,6 @@ app.post('/api/login', (req, res) => {
         
         console.log('User found:', { username: userRow.Username, storedPassword: userRow.password });
         
-        // Check password
         if (userRow.password === password) {
             console.log('Login successful for:', username);
             res.json({ success: true, username: userRow.Username });
@@ -176,7 +162,6 @@ app.post('/api/login', (req, res) => {
     });
 });
 
-// Matches endpoint
 app.get('/api/matches', (req, res) => {
     if (!db) {
         return res.status(503).json({ error: 'Database not ready' });
@@ -201,7 +186,6 @@ app.get('/api/matches', (req, res) => {
             return res.status(500).json({ error: err.message });
         }
         
-        // Get user's votes and favorite teams if username provided
         if (username) {
             db.all('SELECT matchID, HomeWin FROM Vote WHERE Username = ?', [username], (voteErr, votes) => {
                 if (voteErr) {
@@ -236,7 +220,6 @@ app.get('/api/matches', (req, res) => {
     });
 });
 
-// Vote endpoint
 app.post('/api/vote', (req, res) => {
     if (!db) {
         return res.status(503).json({ success: false, message: 'Database not ready' });
@@ -265,7 +248,6 @@ app.post('/api/vote', (req, res) => {
     );
 });
 
-// Favorite team endpoint
 app.post('/api/favorite-team', (req, res) => {
     if (!db) {
         return res.status(503).json({ success: false, message: 'Database not ready' });
@@ -292,7 +274,6 @@ app.post('/api/favorite-team', (req, res) => {
     );
 });
 
-// Remove favorite team endpoint
 app.delete('/api/favorite-team', (req, res) => {
     if (!db) {
         return res.status(503).json({ success: false, message: 'Database not ready' });
@@ -319,7 +300,6 @@ app.delete('/api/favorite-team', (req, res) => {
     );
 });
 
-// Initialize database and start server
 initDatabase((err, database) => {
     if (err) {
         console.error('Failed to initialize database:', err);

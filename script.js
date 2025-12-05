@@ -1,4 +1,3 @@
-// Toggle between sign in and create account forms
 document.getElementById('showCreateAccount').addEventListener('click', function(e) {
     e.preventDefault();
     document.getElementById('signinForm').style.display = 'none';
@@ -13,7 +12,6 @@ document.getElementById('showSignIn').addEventListener('click', function(e) {
     document.getElementById('pageTitle').textContent = 'Sign In';
 });
 
-// Sign in form handler
 document.getElementById('signinForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -40,7 +38,6 @@ document.getElementById('signinForm').addEventListener('submit', async function(
     }
 });
 
-// Create account form handler
 document.getElementById('createAccountForm').addEventListener('submit', async function(e) {
     e.preventDefault();
     
