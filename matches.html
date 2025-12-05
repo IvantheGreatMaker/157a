@@ -13,39 +13,127 @@
             <thead>
                 <tr>
                     <th>Match ID</th>
-                    <th>Team 1</th>
-                    <th>Team 2</th>
+                    <th>Home Team</th>
+                    <th>Away Team</th>
                     <th>Score</th>
                     <th>Date</th>
+                    <th>Vote</th>
                 </tr>
             </thead>
             <tbody id="matchesBody">
-                <tr><td colspan="5">Loading...</td></tr>
+                <tr><td colspan="6">Loading...</td></tr>
             </tbody>
         </table>
     </div>
     <script>
-        fetch('http://localhost:3000/api/matches')
+        const username = localStorage.getItem('username');
+        
+        function vote(matchID, homeWin) {
+            if (!username) {
+                alert('Please sign in to vote');
+                return;
+            }
+            
+            fetch('http://localhost:3000/api/vote', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, matchID, homeWin })
+            })
             .then(res => res.json())
             .then(data => {
-                const tbody = document.getElementById('matchesBody');
-                tbody.innerHTML = '';
-                data.matches.forEach(match => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${match.matchID}</td>
-                        <td>${match.homeTeam}</td>
-                        <td>${match.awayTeam}</td>
-                        <td>${match.homeScore}-${match.awayScore}</td>
-                        <td>${match.matchDate}</td>
-                    `;
-                    tbody.appendChild(row);
-                });
+                if (data.success) {
+                    loadMatches();
+                } else {
+                    alert(data.message || 'Failed to vote');
+                }
             })
             .catch(err => {
-                document.getElementById('matchesBody').innerHTML = 
-                    '<tr><td colspan="5">Error loading matches</td></tr>';
+                console.error('Vote error:', err);
+                alert('Error voting: ' + err.message);
             });
+        }
+        
+        function toggleFavorite(teamID, isFavoriteStr) {
+            if (!username) {
+                alert('Please sign in to favorite teams');
+                return;
+            }
+            
+            const isFavorite = isFavoriteStr === 'true' || isFavoriteStr === true;
+            const url = 'http://localhost:3000/api/favorite-team';
+            const method = isFavorite ? 'DELETE' : 'POST';
+            
+            fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, teamID })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    loadMatches();
+                } else {
+                    alert(data.message || 'Failed to update favorite');
+                }
+            })
+            .catch(err => {
+                console.error('Favorite error:', err);
+                alert('Error updating favorite: ' + err.message);
+            });
+        }
+        
+        function loadMatches() {
+            const url = username ? `http://localhost:3000/api/matches?username=${username}` : 'http://localhost:3000/api/matches';
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('matchesBody');
+                    tbody.innerHTML = '';
+                    
+                    if (!data.matches || data.matches.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="6">No matches found</td></tr>';
+                        return;
+                    }
+                    
+                    data.matches.forEach(match => {
+                        const row = document.createElement('tr');
+                        const homeStar = match.homeTeamFavorite ? '★' : '☆';
+                        const awayStar = match.awayTeamFavorite ? '★' : '☆';
+                        const homeVoteClass = match.userVote === true ? 'voted' : '';
+                        const awayVoteClass = match.userVote === false ? 'voted' : '';
+                        
+                        row.innerHTML = `
+                            <td>${match.matchID}</td>
+                            <td>
+                                <span class="favorite-star" onclick="toggleFavorite(${match.home_teamID}, ${match.homeTeamFavorite ? 'true' : 'false'})">${homeStar}</span>
+                                ${match.homeTeam}
+                            </td>
+                            <td>
+                                <span class="favorite-star" onclick="toggleFavorite(${match.away_teamID}, ${match.awayTeamFavorite ? 'true' : 'false'})">${awayStar}</span>
+                                ${match.awayTeam}
+                            </td>
+                            <td>${match.homeScore}-${match.awayScore}</td>
+                            <td>${match.matchDate}</td>
+                            <td>
+                                <button class="vote-btn ${homeVoteClass}" onclick="vote(${match.matchID}, true)" ${match.userVote === true ? 'disabled' : ''}>
+                                    Home
+                                </button>
+                                <button class="vote-btn ${awayVoteClass}" onclick="vote(${match.matchID}, false)" ${match.userVote === false ? 'disabled' : ''}>
+                                    Away
+                                </button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(err => {
+                    document.getElementById('matchesBody').innerHTML = 
+                        '<tr><td colspan="6">Error loading matches</td></tr>';
+                });
+        }
+        
+        loadMatches();
     </script>
 </body>
 </html>
